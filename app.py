@@ -1,18 +1,18 @@
 from flask import Flask, render_template_string
-import mysql.connector
+import pymysql
 
 app = Flask(__name__)
 
 def obtener_datos():
     try:
-        db = mysql.connector.connect(
-            host="10.0.2.15",
-            user="bazar_web_user",
-            password="Web_Client_99*",
+        db = pymysql.connect(
+            host="localhost", 
+            user="bazar_web_user", 
+            password="Web_Client_99*", 
             database="bazar_premium",
-            connect_timeout=5
+            cursorclass=pymysql.cursors.DictCursor
         )
-        cursor = db.cursor(dictionary=True)
+        cursor = db.cursor()
         cursor.execute("SELECT * FROM productos")
         productos = cursor.fetchall()
         db.close()
@@ -24,52 +24,50 @@ def obtener_datos():
 def index():
     productos = obtener_datos()
     
-    if isinstance(productos, str):
-        return f"<h2 style='color:red;font-family:sans-serif;text-align:center;'>Error de conexión: {productos}</h2>"
-
     html_template = """
     <!DOCTYPE html>
-    <html>
+    <html lang="es">
     <head>
-        <title>Bazar Premium</title>
+        <meta charset="UTF-8">
+        <title>Panel de Control | Bazar Premium</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
-            body { font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; padding: 40px; }
-            .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-            h1 { color: #0d6efd; text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0d6efd; padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; }
-            th { background-color: #0d6efd; color: white; padding: 12px; text-align: left; }
-            td { padding: 12px; border-bottom: 1px solid #dee2e6; color: #333; }
-            tr:hover { background-color: #f1f4f9; }
+            body { background-color: #f8f9fa; }
+            .navbar { background: #2c3e50; }
+            .card { border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
         </style>
     </head>
     <body>
+        <nav class="navbar navbar-dark mb-4 p-3">
+            <div class="container-fluid"><span class="navbar-brand h1">💎 BAZAR PREMIUM v2.0</span></div>
+        </nav>
         <div class="container">
-            <h1>Inventario Bazar Premium</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Producto</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in lista %}
-                    <tr>
-                        <td>{{ p.id }}</td>
-                        <td>{{ p.nombre }}</td>
-                        <td>{{ p.precio }} €</td>
-                        <td>{{ p.stock }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="card p-4">
+                <h2 class="text-primary mb-4">Inventory Management</h2>
+                {% if error %}
+                    <div class="alert alert-danger">Error: {{ error }}</div>
+                {% else %}
+                    <table class="table table-hover">
+                        <thead><tr><th>Product Name</th><th>Price</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for p in productos %}
+                            <tr>
+                                <td class="fw-bold">{{ p.nombre }}</td>
+                                <td><span class="badge bg-info text-dark">{{ p.precio }} €</span></td>
+                                <td><span class="badge bg-success">In Stock</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
         </div>
     </body>
     </html>
     """
-    return render_template_string(html_template, lista=productos)
+    if isinstance(productos, str):
+        return render_template_string(html_template, error=productos)
+    return render_template_string(html_template, productos=productos)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
